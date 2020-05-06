@@ -1,0 +1,202 @@
+<head>
+	<style>
+		.chat-box {
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			height: 50%;
+			width: 50%;
+		}
+
+		.box {
+			width: 100%;
+			height: 100%;
+			background: white;
+			z-index: 9999;
+		}
+
+		.open {
+			text-align: center;
+			font-size: 20px;
+			border: 2px solid #010101;
+			background: grey;
+			color: black;
+		}
+
+		.Content {
+			height: 400px;
+			overflow: auto;
+			background: #fff;
+			padding-bottom: 100px;
+			overflow: auto;
+			overflow-x: hidden;
+		}
+
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font: 13px Helvetica, Arial;
+			overflow: hidden;
+		}
+
+		form {
+			background: #000;
+			padding: 3px;
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			width: 100%;
+		}
+
+		form input {
+			border: 0;
+			padding: 10px;
+			width: 90%;
+			margin-right: .5%;
+		}
+
+		form button {
+			width: 9%;
+			background: rgb(130, 224, 255);
+			border: none;
+			padding: 10px;
+		}
+
+		#messages {
+			list-style-type: none;
+			margin: 0;
+			padding: 0;
+			overflow-y: auto;
+		}
+
+		#messages li {
+			position: aboslute;
+			padding: 5px 10px;
+		}
+
+		#messages li:nth-child(odd) {
+			background: #eee;
+		}
+
+		#ctx { width: 100%; height: 50%; }
+	</style>
+</head>
+<canvas id="ctx" width="2000px" height="500px" style="border:1px solid #000000;"></canvas>
+<img src="https://i.imgur.com/D5bcE7v.png" style="float:right; border:0" width="50%" height="51%" title="working" alt="image should be here :(" />
+<div class="chat-box">
+	<div class="open">Chat
+		<div class="box">
+			<div class="Content">
+
+				<body>
+					<ul id="messages"></ul>
+					<form action=" ">
+						<input id="m" autocomplete="off" />
+					</form>
+					<script src="/socket.io/socket.io.js"></script>
+					<script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+					<script src = "https://code.jquery.com/jquery-1.11.1.js" ></script>
+					<script>
+						var socket = io();
+
+						var ctx = document.getElementById("ctx").getContext("2d");
+
+						socket.on('newPosition',function(data) {
+							ctx.clearRect(0,0,10000,10000);
+							ctx.font = "24px Verdana";
+
+							for(var i = 0; i < data.player.length; i++) {
+								ctx.fillStyle = data.player[i].color;
+								ctx.fillRect(data.player[i].x, data.player[i].y, 20, 20);
+							}
+
+							for(var i = 0; i < data.item.length; i++) {
+								if(!data.item[i].canOpen) {
+									if(data.item[i].solved == 0)
+									{
+										ctx.fillStyle = "rgba(32, 45, 21, 0.5)";
+									}
+									else
+									{
+										ctx.fillStyle = "rgba(0, 255, 0, 0.5)";
+									}
+									ctx.fillRect(data.item[i].x, data.item[i].y, 20, 20);
+								} else {
+									ctx.fillStyle = 'red';
+									ctx.fillRect(data.item[i].x, data.item[i].y, 20, 20);
+									ctx.fillText(data.item[i].message, 1000, 400);
+								}
+							}
+						});
+
+						// wasd controls for movement
+						document.onkeydown = function(event) {
+							if(event.keyCode === 68) // d
+								socket.emit('keyPress',{inputId:'right',state:true});
+							if(event.keyCode === 83) // s
+								socket.emit('keyPress',{inputId:'down',state:true});
+							if(event.keyCode === 65) // a
+								socket.emit('keyPress',{inputId:'left',state:true});
+							if(event.keyCode === 87) // w
+								socket.emit('keyPress',{inputId:'up',state:true});
+							if(event.keyCode === 39) // Right Arrow
+								socket.emit('keyPress',{inputId:'right',state:true});
+							if(event.keyCode === 40) // Down Arrow
+								socket.emit('keyPress',{inputId:'down',state:true});
+							if(event.keyCode === 37) // Left Arrow
+								socket.emit('keyPress',{inputId:'left',state:true});
+							if(event.keyCode === 38) // Up Arrow
+								socket.emit('keyPress',{inputId:'up',state:true});
+							if(event.keyCode === 69) //E to activate items
+								socket.emit('keyPress',{inputId:'item',state:true});
+						}
+						document.onkeyup = function(event) {
+							if(event.keyCode === 68) // d
+								socket.emit('keyPress',{inputId:'right',state:false});
+							if(event.keyCode === 83) // s
+								socket.emit('keyPress',{inputId:'down',state:false});
+							if(event.keyCode === 65) // a
+								socket.emit('keyPress',{inputId:'left',state:false});
+							if(event.keyCode === 87) // w
+								socket.emit('keyPress',{inputId:'up',state:false});
+							if(event.keyCode === 39) // Right Arrow
+								socket.emit('keyPress',{inputId:'right',state:false});
+							if(event.keyCode === 40) // Down Arrow
+								socket.emit('keyPress',{inputId:'down',state:false});
+							if(event.keyCode === 37) // Left Arrow
+								socket.emit('keyPress',{inputId:'left',state:false});
+							if(event.keyCode === 38) // Up Arrow
+								socket.emit('keyPress',{inputId:'up',state:false});
+							if(event.keyCode === 69) //E to activate items
+								socket.emit('keyPress',{inputId:'item',state:false});
+						}
+
+						function setUsername() {
+							var person = prompt("Please enter your name");
+							socket.emit('setUsername', person);
+						}
+
+						setUsername();
+
+						$(function() {
+							$('form').submit(function(e) {
+								e.preventDefault(); // prevents page reloading
+								socket.emit('chat message', $('#m').val()); //sends the message to the app.js file
+								$('#m').val('');
+								return false;
+							});
+							socket.on('chat message', function(msg) { //receives what is to be printed and prints it
+								$('#messages').append($('<li>').text(msg));
+							});
+
+						});
+					</script>
+				</body>
+			</div>
+		</div>
+	</div>
+</div>
